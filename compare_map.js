@@ -1,4 +1,4 @@
-export async function compareMap(ppl, discog) {
+const compareMap = (ppl, discog) => {
 
     const calculateScore = (pplRecord) => {
         const pplTitle = pplRecord.recordingTitle.toLowerCase();
@@ -75,4 +75,8 @@ export async function compareMap(ppl, discog) {
         const pplWithSimilarityDiscogFlat = Array.from(new Set(_pplWithSimilarityDiscogFlat.map(t => t.recordingId))).map(recordId => _pplWithSimilarityDiscogFlat.find(t => t.recordingId === recordId))
         return pplWithSimilarityDiscogFlat;
     })
+}
+
+module.export = {
+    compareMap
 }
