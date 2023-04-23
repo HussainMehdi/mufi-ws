@@ -7,7 +7,7 @@
 
       ws.onmessage = (event) => {
         el = document.getElementById('server-time');
-        el.innerHTML = 'Server time: ' + event.data;
+        el.innerHTML += `<br/><span>${event.data}</span>`
       };
     </script>
   </head>

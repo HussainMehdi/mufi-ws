@@ -1,5 +1,9 @@
-const compareMap = (ppl, discog) => {
+const compareMap = async (ppl, discog, progressCb) => {
 
+    const progress = {
+        total: ppl.length,
+        done: 0,
+    }
     const calculateScore = (pplRecord) => {
         const pplTitle = pplRecord.recordingTitle.toLowerCase();
         const pplTitleWords = pplTitle.split(' ');
@@ -34,13 +38,12 @@ const compareMap = (ppl, discog) => {
                 maxScoreIndex = i;
             }
         });
-        setProgressCount(++progressCount);
+        // setProgressCount(++progressCount);
+        progress.done++;
+        progressCb(progress);
         pplRecord.similarity = { score: maxScore, discogIndex: maxScoreIndex };
         return pplRecord;
     }
-
-    setProgressCount(0);
-    setProgressTotal(ppl.length);
 
     const pplWithSimilarityPromises = ppl.map((record) => {
         return new Promise((resolve, reject) => {
@@ -50,7 +53,7 @@ const compareMap = (ppl, discog) => {
         });
     });
 
-    Promise.all(pplWithSimilarityPromises).then((pplWithSimilarity) => {
+    return Promise.all(pplWithSimilarityPromises).then((pplWithSimilarity) => {
 
         const filterScore = 1;
         const pplWithSimilarityFiltered = pplWithSimilarity.filter((pplRecord) => {
@@ -77,6 +80,6 @@ const compareMap = (ppl, discog) => {
     })
 }
 
-module.export = {
+module.exports = {
     compareMap
 }
