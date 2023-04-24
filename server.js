@@ -4,7 +4,8 @@ const express = require('express');
 const { Server } = require('ws');
 const axios = require('axios');
 const uuid = require('uuid').v4;
-
+const https = require('https');
+const fs = require('fs');
 const { buildCache } = require('./lru_cache');
 const { compareMap } = require('./compare_map');
 
@@ -12,6 +13,10 @@ const PORT = process.env.PORT || 9000;
 const SCRAPPER_ACTIVE_TIMEOUT = 10000;
 const INDEX = '/index.html';
 const DISCOG_API = 'https://dgr4q70dil.execute-api.us-east-1.amazonaws.com/prod/catalog?id='
+
+
+const key = fs.readFileSync('key.pem');
+const cert = fs.readFileSync('cert.pem');
 
 
 // all registered ppl scrappers
@@ -27,9 +32,10 @@ const pplCache = buildCache();
 const comparisionCache = buildCache();
 const comparisionFinalResults = buildCache();
 
-const server = express()
+const _express = express()
   .use((req, res) => res.sendFile(INDEX, { root: __dirname }))
-  .listen(PORT, () => console.log(`Listening on ${PORT}`));
+
+const server = https.createServer({ key, cert }, _express);
 
 const scrapperStates = {
   idle: 'idle',
@@ -137,7 +143,7 @@ const wsCommands = {
               discogData.push(...data);
               currentRecords += data.length;
               if (headers['x-total-record-count']) {
-                totalRecords = headers['x-total-record-count'];
+                totalRecords = parseInt(headers['x-total-record-count']);
               }
               const progress = comparisionCache.get(artistId).progress;
               progress['swarm'] = {
@@ -163,8 +169,8 @@ const wsCommands = {
     const { artistId, value } = payload;
     if (artistId && value) {
       const discogData = discogCache.get(artistId);
-      const pplData = pplCache.set(artistId, value);
-      const comparisonResult = compareMap(value.unlinkedTracks, discogData, (mappingProgress) => {
+      pplCache.set(artistId, value);
+      const comparisonResult = await compareMap(value.unlinkedTracks, discogData, (mappingProgress) => {
         const progress = comparisionCache.get(artistId).progress;
         progress.mapping = mappingProgress;
         broadcast(buildWsMessage('progress', { artistId, progress }));
@@ -231,3 +237,5 @@ process.on('SIGINT', () => {
   clearInterval(scrapperHealthCheck);
   process.exit();
 });
+
+server.listen(PORT, () => console.log(`Listening on ${PORT}`));
