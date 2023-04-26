@@ -5,7 +5,11 @@ const compareMap = async (ppl, discog, progressCb) => {
         done: 0,
     }
     const calculateScore = (pplRecord) => {
-        const pplTitle = pplRecord.recordingTitle.toLowerCase();
+        if (!!!pplRecord?.recordingTitle){
+            pplRecord.similarity = { score: maxScore, discogIndex: maxScoreIndex };
+            return pplRecord;
+        }
+        const pplTitle = (pplRecord.recordingTitle).toLowerCase();
         const pplTitleWords = pplTitle.split(' ');
         const pplTitlePartialWords = pplTitleWords.map((word) => {
             return word.slice(0, 3);
