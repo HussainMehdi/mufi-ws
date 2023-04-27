@@ -6,7 +6,7 @@ const compareMap = async (ppl, discog, progressCb) => {
     }
     const calculateScore = (pplRecord) => {
         if (!!!pplRecord?.recordingTitle){
-            pplRecord.similarity = { score: maxScore, discogIndex: maxScoreIndex };
+            pplRecord.similarity = { score: 0, discogIndex: 0 };
             return pplRecord;
         }
         const pplTitle = (pplRecord.recordingTitle).toLowerCase();
