@@ -96,7 +96,7 @@ const wsCommands = {
     }
   },
   processArtist: async (ws, payload) => {
-    const { artistId } = payload;
+    const { artistId, pname } = payload;
     if (artistId) {
       const artistResult = comparisionFinalResults.get(artistId);
       if (artistResult) {
@@ -108,7 +108,7 @@ const wsCommands = {
       }
       if (comparisionCache.get(artistId)) {
         if (pplCache.get(artistId)) {
-          wsCommands.pplScrapperResult(ws, { artistId, value: pplCache.get(artistId) });
+          wsCommands.pplScrapeResult(ws, { artistId, value: pplCache.get(artistId) });
         }
         broadcast(buildWsMessage('progress', { artistId, progress: comparisionCache.get(artistId).progress }));
         return undefined;
@@ -123,7 +123,7 @@ const wsCommands = {
         });
 
         // process discog data
-        const discogData = discogCache.get(artistId);
+        /*const discogData = discogCache.get(artistId);
         if (!discogData) {
           // discog api is paginated now
           // with `x-total-record-count` in header to calculate progress
@@ -156,8 +156,8 @@ const wsCommands = {
           } while (_data && _data.length);
           discogCache.set(artistId, discogData);
 
-        }
-        scrapper.ws.send(JSON.stringify({ command: 'pplScrape', data: { artistId } }));
+        }*/
+        scrapper.ws.send(JSON.stringify({ command: 'pplScrape', data: { artistId, pname} }));
       } else {
         console.log('No scrapper available');
         ws.send(buildWsMessage('error', { message: 'all services busy' }));
@@ -168,16 +168,16 @@ const wsCommands = {
   pplScrapeResult: async (ws, payload) => {
     const { artistId, value } = payload;
     if (artistId && value) {
-      const discogData = discogCache.get(artistId);
+      // const discogData = discogCache.get(artistId);
       pplCache.set(artistId, value);
-      const comparisonResult = await compareMap(value.unlinkedTracks, discogData, (mappingProgress) => {
-        const progress = comparisionCache.get(artistId).progress;
-        progress.mapping = mappingProgress;
-        broadcast(buildWsMessage('progress', { artistId, progress }));
-      });
+      // const comparisonResult = await compareMap(value.unlinkedTracks, discogData, (mappingProgress) => {
+      //   const progress = comparisionCache.get(artistId).progress;
+      //   progress.mapping = mappingProgress;
+      //   broadcast(buildWsMessage('progress', { artistId, progress }));
+      // });
       const artistResult = {
         processedInfo: value,
-        comparisonResult
+        comparisonResult: value.unlinkedTracks
       };
       comparisionFinalResults.set(artistId, artistResult);
       broadcast(buildWsMessage('artistResult', {
