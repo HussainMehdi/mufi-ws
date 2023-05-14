@@ -59,6 +59,7 @@ const wsCommands = {
       state: scrapperStates.idle,
       lastPong: Date.now(),
     };
+    console.log(`Registered ppl scrapper with id ${id}`);
     return buildWsMessage('registerPPLScrapper', { id });
   },
   healthCheck: async (ws, payload) => {
@@ -74,6 +75,7 @@ const wsCommands = {
     const { id } = payload;
     if (id && pplScrappers[id]) {
       pplScrappers[id].lastPong = Date.now();
+      console.log(`Scrapper ${id} ponged`);
     }
     return undefined;
   },
