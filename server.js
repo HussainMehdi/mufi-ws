@@ -32,6 +32,8 @@ const pplCache = buildCache();
 const comparisionCache = buildCache();
 const comparisionFinalResults = buildCache();
 
+const buildKey = (artistId, pname) => `${artistId}_${pname}`;
+
 const _express = express()
   .use((req, res) => res.sendFile(INDEX, { root: __dirname }))
 
@@ -80,14 +82,15 @@ const wsCommands = {
     return undefined;
   },
   progress: async (ws, payload) => {
-    const { artistId, currentProgress, totalProgressCount, key } = payload;
+    const { artistId, currentProgress, totalProgressCount, key, pname } = payload;
+    const _key = buildKey(artistId, pname);
     if (artistId && currentProgress && totalProgressCount && key) {
-      const progress = comparisionCache.get(artistId).progress;
+      const progress = comparisionCache.get(_key).progress;
       progress[key] = {
         currentProgress,
         totalProgressCount,
       };
-      broadcast(buildWsMessage('progress', { artistId, progress }));
+      broadcast(buildWsMessage('progress', { artistId: _key, progress }));
     }
     return undefined;
   },
@@ -100,7 +103,8 @@ const wsCommands = {
   processArtist: async (ws, payload) => {
     const { artistId, pname } = payload;
     if (artistId) {
-      const artistResult = comparisionFinalResults.get(artistId);
+      const key = buildKey(artistId, pname);
+      const artistResult = comparisionFinalResults.get(key);
       if (artistResult) {
         broadcast(buildWsMessage('artistResult', {
           artistId,
@@ -108,58 +112,22 @@ const wsCommands = {
         }));
         return undefined;
       }
-      if (comparisionCache.get(artistId)) {
-        if (pplCache.get(artistId)) {
-          wsCommands.pplScrapeResult(ws, { artistId, value: pplCache.get(artistId) });
+      if (comparisionCache.get(key)) {
+        if (pplCache.get(key)) {
+          wsCommands.pplScrapeResult(ws, { artistId, value: pplCache.get(key) });
         }
-        broadcast(buildWsMessage('progress', { artistId, progress: comparisionCache.get(artistId).progress }));
+        broadcast(buildWsMessage('progress', { artistId, progress: comparisionCache.get(key).progress }));
         return undefined;
       }
       const scrapper = Object.values(pplScrappers).find((scrapper) => scrapper.state === scrapperStates.idle);
       if (scrapper) {
         scrapper.state = scrapperStates.onjob;
-        comparisionCache.set(artistId, {
+        comparisionCache.set(key, {
           artistId,
           progress: {
           },
         });
-
-        // process discog data
-        /*const discogData = discogCache.get(artistId);
-        if (!discogData) {
-          // discog api is paginated now
-          // with `x-total-record-count` in header to calculate progress
-          // https://discog-api.com?id=673106&page=2&per_page=200
-
-          // get all discog records with pagination and calculate progress
-          const discogData = [];
-          let page = 1;
-          let totalRecords = 0;
-          let currentRecords = 0;
-          let _data = [];
-          do {
-            const { data, headers } = await axios.get(`${DISCOG_API}${artistId}&page=${page}&per_page=200`);
-            _data = data;
-
-            if (data && data.length) {
-              discogData.push(...data);
-              currentRecords += data.length;
-              if (headers['x-total-record-count']) {
-                totalRecords = parseInt(headers['x-total-record-count']);
-              }
-              const progress = comparisionCache.get(artistId).progress;
-              progress['swarm'] = {
-                currentProgress: currentRecords,
-                totalProgressCount: totalRecords,
-              };
-              broadcast(buildWsMessage('progress', { artistId, progress }));
-            }
-            page += 1;
-          } while (_data && _data.length);
-          discogCache.set(artistId, discogData);
-
-        }*/
-        scrapper.ws.send(JSON.stringify({ command: 'pplScrape', data: { artistId, pname} }));
+        scrapper.ws.send(JSON.stringify({ command: 'pplScrape', data: { artistId, pname } }));
       } else {
         console.log('No scrapper available');
         ws.send(buildWsMessage('error', { message: 'all services busy' }));
@@ -168,22 +136,18 @@ const wsCommands = {
     return undefined;
   },
   pplScrapeResult: async (ws, payload) => {
-    const { artistId, value } = payload;
+    const { artistId, pname, value } = payload;
     if (artistId && value) {
-      // const discogData = discogCache.get(artistId);
-      pplCache.set(artistId, value);
-      // const comparisonResult = await compareMap(value.unlinkedTracks, discogData, (mappingProgress) => {
-      //   const progress = comparisionCache.get(artistId).progress;
-      //   progress.mapping = mappingProgress;
-      //   broadcast(buildWsMessage('progress', { artistId, progress }));
-      // });
+      const key = buildKey(artistId, pname);
+      pplCache.set(key, value);
       const artistResult = {
         processedInfo: value,
         comparisonResult: value.unlinkedTracks
       };
-      comparisionFinalResults.set(artistId, artistResult);
+      comparisionFinalResults.set(key, artistResult);
       broadcast(buildWsMessage('artistResult', {
         artistId,
+        pname,
         result: artistResult
       }));
     }
