@@ -108,6 +108,7 @@ const wsCommands = {
       if (artistResult) {
         broadcast(buildWsMessage('artistResult', {
           artistId,
+          pname,
           result: artistResult
         }));
         return undefined;
@@ -142,7 +143,6 @@ const wsCommands = {
       pplCache.set(key, value);
       const artistResult = {
         processedInfo: value,
-        comparisonResult: value.unlinkedTracks
       };
       comparisionFinalResults.set(key, artistResult);
       broadcast(buildWsMessage('artistResult', {
